@@ -12,8 +12,8 @@ public record Station(
         String owner,
         String id,
         String height,
-        String latitude,
-        String longitude,
+        Double latitude,
+        Double longitude,
         boolean active
 ) {
     public Station {

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import io.github.mjsaa.energy_weather_api.data.Location;
 import io.github.mjsaa.energy_weather_api.data.Station;
 import io.github.mjsaa.energy_weather_api.data.StationResponse;
+import io.github.mjsaa.energy_weather_api.service.GeoClosestFinder;
 import io.github.mjsaa.energy_weather_api.service.PostPositionService;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class EnergyWeatherApiApplicationTests {
 	@Autowired
 	PostPositionService postalPositionService;
+	@Autowired
+	GeoClosestFinder geoClosestFinder;
 	@Test
 	void contextLoads() {
 	}
@@ -100,4 +103,19 @@ class EnergyWeatherApiApplicationTests {
 
 	}
 
+	@Test
+	void testGetClosest() throws JSONException, IOException {
+		// Given
+		// List of stations
+		// Retrieve locations
+		List<Location> locations = JSONParse.getStations("1").stream()
+				.map(station -> new Location(station.latitude(), station.longitude())).toList();
+		// A given location retrieved from a post code
+		Location location = postalPositionService.getLocation("13443");
+		Location expectedClosestSMHIStation = new Location(59.3226, 18.3725);
+		// When
+		Location actualClosestSMHIStation = geoClosestFinder.getClosest(locations, location);
+		// Then
+		assertEquals(expectedClosestSMHIStation, actualClosestSMHIStation, "This is not the expected closest station to this post number!");
+	}
 }
