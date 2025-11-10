@@ -144,7 +144,7 @@ public class JSONParse {
     }
 
 
-    private static String readStringFromUrl(String url) throws IOException {
+    public static String readStringFromUrl(String url) throws IOException {
 
         InputStream inputStream = new URL(url).openStream();
         try {

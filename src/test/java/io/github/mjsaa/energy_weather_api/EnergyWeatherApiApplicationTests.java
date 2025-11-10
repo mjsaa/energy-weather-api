@@ -1,12 +1,14 @@
 package io.github.mjsaa.energy_weather_api;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
+import io.github.mjsaa.energy_weather_api.data.Location;
 import io.github.mjsaa.energy_weather_api.data.Station;
 import io.github.mjsaa.energy_weather_api.data.StationResponse;
+import io.github.mjsaa.energy_weather_api.service.PostPositionService;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import utilities.smhi.JSONParse;
 
@@ -18,7 +20,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 class EnergyWeatherApiApplicationTests {
-
+	@Autowired
+	PostPositionService postalPositionService;
 	@Test
 	void contextLoads() {
 	}
@@ -81,5 +84,20 @@ class EnergyWeatherApiApplicationTests {
 			assertEquals(msg, "Latitude and longitude cannot be null for station");
         }
     }
+
+	@Test
+	void testGetLocation() throws IOException {
+		// Given lat and lon for postal code 13443 (Gustavsberg, Sweden)
+		String postCode = "13443";
+		double expectedLat = 59.31477;
+		double expectedLon = 18.406534;
+		// When
+		Location actual = postalPositionService.getLocation(postCode);
+		// Assert
+		assertNotNull(actual);
+		assertEquals(expectedLat, actual.latitude(),  0.0001);
+		assertEquals(expectedLon, actual.longitude(),  0.0001);
+
+	}
 
 }
