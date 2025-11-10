@@ -54,17 +54,17 @@ class EnergyWeatherApiApplicationTests {
 
 		// When
 		List<Station> stations = JSONParse.getStations("1");
-		Double expectedLat = 55.3837;
-		Double expectedLon = 12.8167;
+		double expectedLat = 55.3837;
+		double expectedLon = 12.8167;
 
 		boolean exists = stations.stream()
 				.anyMatch(
 						s ->
-								expectedLat.toString().equals(s.latitude()) &&
-										expectedLon.toString().equals(s.longitude())
+								Double.compare(expectedLat, s.latitude()) == 0 &&
+										Double.compare(expectedLon, s.longitude()) == 0
 				);
 		// Then
-		assertTrue(exists, "Expected station with given latitude and longitude to exist");
+		assertTrue(exists, "Expected station with given latitude and longitude to exist, but it does not");
 	}
 
 	@Test
