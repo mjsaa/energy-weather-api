@@ -1,0 +1,36 @@
+{
+  "station": [
+   {
+      "key": "154860",
+      "updated": 841535999000,
+      "title": "Daggpunktstemperatur - Abelvattnet Aut",
+      "summary": "Latitud: 65.5300 Longitud: 14.9700 Höjd: 665.0",
+      "link": [
+        {
+          "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/39/station/154860.json",
+          "rel": "station",
+          "type": "application/json"
+        },
+        {
+          "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/39/station/154860.xml",
+          "rel": "station",
+          "type": "application/xml"
+        },
+        {
+          "href": "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/39/station/154860.atom",
+          "rel": "station",
+          "type": "application/atom+xml"
+        }
+      ],
+      "name": "Abelvattnet Aut",
+      "owner": "SMHI",
+      "ownerCategory": "CLIMATE",
+      "measuringStations": "CORE",
+      "id": 154860,
+     "height": 665.0,
+     "active": false,
+     "from": 441763200000,
+     "to": 841535999000
+    }
+  ]
+}
