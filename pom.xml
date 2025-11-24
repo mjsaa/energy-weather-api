@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>io.github.mjsaa</groupId>
-	<artifactId>energy-weather-api</artifactId>
+	<artifactId>energy-weatherObservation-api</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>energy-weather-api</name>
+	<name>energy-weatherObservation-api</name>
 	<description>Combine whether data with electricity price</description>
 	<url/>
 	<licenses>

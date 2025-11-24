@@ -2,16 +2,15 @@ package io.github.mjsaa.energy_weather_api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
-import io.github.mjsaa.energy_weather_api.data.Location;
-import io.github.mjsaa.energy_weather_api.data.Station;
-import io.github.mjsaa.energy_weather_api.data.StationResponse;
+import io.github.mjsaa.energy_weather_api.data.*;
 import io.github.mjsaa.energy_weather_api.service.GeoClosestFinder;
 import io.github.mjsaa.energy_weather_api.service.PostPositionService;
+import io.github.mjsaa.energy_weather_api.service.WeatherService;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import utilities.smhi.JSONParse;
+import io.github.mjsaa.energy_weather_api.smhi.utils.SMHIService;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,13 +20,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 class EnergyWeatherApiApplicationTests {
+	private static final double GEO_TOLERANCE = 1e-4;
+
 	@Autowired
 	PostPositionService postalPositionService;
 	@Autowired
 	GeoClosestFinder geoClosestFinder;
-	@Test
-	void contextLoads() {
-	}
+	@Autowired
+	WeatherService weatherService;
+	@Autowired
+    SMHIService SMHIService;
 
 	@Test
 	void testStationListLength() throws JSONException, IOException {
@@ -35,7 +37,8 @@ class EnergyWeatherApiApplicationTests {
 
 		// When
 		// Call SMHI API to retrieve station list
-		List<Station> stations = JSONParse.getStations("1");
+
+		List<Station> stations = SMHIService.getStations("1");
 		int expectedNumberOfStations = 991;
 		// Then
 		// Assert that it has expected number of stations
@@ -53,7 +56,7 @@ class EnergyWeatherApiApplicationTests {
 		// Given
 
 		// When
-		List<Station> stations = JSONParse.getStations("1");
+		List<Station> stations = SMHIService.getStations("1");
 		double expectedLat = 55.3837;
 		double expectedLon = 12.8167;
 
@@ -98,8 +101,8 @@ class EnergyWeatherApiApplicationTests {
 		Location actual = postalPositionService.getLocation(postCode);
 		// Assert
 		assertNotNull(actual);
-		assertEquals(expectedLat, actual.latitude(),  0.0001);
-		assertEquals(expectedLon, actual.longitude(),  0.0001);
+		assertEquals(expectedLat, actual.latitude(),  GEO_TOLERANCE);
+		assertEquals(expectedLon, actual.longitude(),  GEO_TOLERANCE);
 
 	}
 
@@ -108,14 +111,42 @@ class EnergyWeatherApiApplicationTests {
 		// Given
 		// List of stations
 		// Retrieve locations
-		List<Location> locations = JSONParse.getStations("1").stream()
-				.map(station -> new Location(station.latitude(), station.longitude())).toList();
-		// A given location retrieved from a post code
-		Location location = postalPositionService.getLocation("13443");
-		Location expectedClosestSMHIStation = new Location(59.3226, 18.3725);
+		try (InputStream inputStream = getClass().getResourceAsStream(
+				"/stations.json"
+		)) {
+			ObjectMapper mapper = new ObjectMapper();
+			List<Station> stations = mapper.readValue(inputStream, StationResponse.class).stations();
+			List<Location> locations = stations.stream()
+					.map(station -> new Location(station.latitude(), station.longitude())).toList();
+			// A given location
+			Location location = new Location(59.31477,18.4065336);
+			Location expectedClosestSMHIStation = new Location(59.3226, 18.3725);
+
+			// When
+			Station actualClosestSMHIStation = geoClosestFinder.getClosest(location, stations);
+
+			// Then
+			assertEquals(
+					expectedClosestSMHIStation.latitude(),
+					actualClosestSMHIStation.latitude(),
+					GEO_TOLERANCE);
+			assertEquals(
+					expectedClosestSMHIStation.longitude(),
+					actualClosestSMHIStation.longitude(),
+					GEO_TOLERANCE
+			);
+		}
+	}
+
+	@Test
+	void testGetWeatherData() throws IOException {
+		// Given
+		String postNumber = "13443";
 		// When
-		Location actualClosestSMHIStation = geoClosestFinder.getClosest(locations, location);
+		WeatherSeries weatherSeries = weatherService.getWeatherData(postNumber);
 		// Then
-		assertEquals(expectedClosestSMHIStation, actualClosestSMHIStation, "This is not the expected closest station to this post number!");
+		assertNotNull(weatherSeries);
+		assertTrue(weatherSeries.observations().getFirst().temperature() > -50
+				&& weatherSeries.observations().getFirst().temperature() < 50); // Assume that it never reaches ±50
 	}
 }

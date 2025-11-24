@@ -1,13 +1,11 @@
-package utilities.smhi;
+package io.github.mjsaa.energy_weather_api.smhi.utils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.management.OperatingSystemMXBean;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -18,7 +16,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 
@@ -26,15 +23,16 @@ import org.springframework.stereotype.Service;
  * Example class for the SMHI metobs API. Uses org.json for JSON parsing.
  *
  */
-
-public class JSONParse {
+@Service
+public class SMHIService {
 
     // Url for the metobs API
     @Value("${smhi.opendata.api.url}")
-    static String metObsAPI = "https://opendata-download-metobs.smhi.se/api";
+    private String metObsAPI;
 
 
     /**
+     * From SMHI example
      * Print all available parameters.
      *
      * @return The key for the last parameter.
@@ -67,7 +65,7 @@ public class JSONParse {
      * @throws IOException
      * @throws JSONException
      */
-    public static String getStationNames(String parameterKey) throws IOException, JSONException {
+    public String getStationNames(String parameterKey) throws IOException, JSONException {
 
         JSONObject stationsObject = readJsonFromUrl(metObsAPI + "/version/latest/parameter/" + parameterKey + ".json");
         JSONArray stationsArray = stationsObject.getJSONArray("station");
@@ -80,10 +78,10 @@ public class JSONParse {
         return stationId;
     }
 
-    public static List<Station> getStations(String parameterKey) throws IOException, JSONException {
+    public List<Station> getStations(String parameterKey) throws IOException, JSONException {
 
         String stationsJsonString = readStringFromUrl(
-                metObsAPI + "/version/latest/parameter/" + parameterKey + ".json"
+                this.metObsAPI + "/version/latest/parameter/" + parameterKey + ".json"
         );
         ObjectMapper mapper = new ObjectMapper();
 
