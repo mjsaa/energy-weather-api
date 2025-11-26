@@ -3,9 +3,11 @@ package io.github.mjsaa.energy_weather_api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import io.github.mjsaa.energy_weather_api.data.*;
+import io.github.mjsaa.energy_weather_api.service.ElectricityService;
 import io.github.mjsaa.energy_weather_api.service.GeoClosestFinder;
 import io.github.mjsaa.energy_weather_api.service.PostPositionService;
 import io.github.mjsaa.energy_weather_api.service.WeatherService;
+import jakarta.validation.ConstraintViolationException;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class EnergyWeatherApiApplicationTests {
 	private static final double GEO_TOLERANCE = 1e-4;
 
+	@Autowired
+	ElectricityService electricityService;
 	@Autowired
 	PostPositionService postalPositionService;
 	@Autowired
@@ -107,7 +111,7 @@ class EnergyWeatherApiApplicationTests {
 	}
 
 	@Test
-	void testGetClosest() throws JSONException, IOException {
+	void testGetClosest() throws IOException {
 		// Given
 		// List of stations
 		// Retrieve locations
@@ -116,8 +120,6 @@ class EnergyWeatherApiApplicationTests {
 		)) {
 			ObjectMapper mapper = new ObjectMapper();
 			List<Station> stations = mapper.readValue(inputStream, StationResponse.class).stations();
-			List<Location> locations = stations.stream()
-					.map(station -> new Location(station.latitude(), station.longitude())).toList();
 			// A given location
 			Location location = new Location(59.31477,18.4065336);
 			Location expectedClosestSMHIStation = new Location(59.3226, 18.3725);
@@ -141,12 +143,28 @@ class EnergyWeatherApiApplicationTests {
 	@Test
 	void testGetWeatherData() throws IOException {
 		// Given
-		String postNumber = "13443";
+		String postCode = "13443";
 		// When
-		WeatherSeries weatherSeries = weatherService.getWeatherData(postNumber);
+		WeatherSeries weatherSeries = weatherService.getWeatherData(postCode);
 		// Then
 		assertNotNull(weatherSeries);
 		assertTrue(weatherSeries.observations().getFirst().temperature() > -50
 				&& weatherSeries.observations().getFirst().temperature() < 50); // Assume that it never reaches ±50
+	}
+
+	@Test
+	void testGetElectricityAreaCode() throws IOException {
+		String RegularPostCode = "13443";
+		String wrongPostCode = "wrong";
+		String tooShortCode = "1";
+		String tooLongCode = "9999999";
+		String electricityArea = electricityService.getElectricityArea(RegularPostCode);
+		assertEquals(electricityArea, "3");
+		assertThrows(ConstraintViolationException.class,
+				() -> electricityService.getElectricityArea(wrongPostCode));
+		assertThrows(ConstraintViolationException.class,
+				() -> electricityService.getElectricityArea(tooLongCode));
+		assertThrows(ConstraintViolationException.class,
+				() -> electricityService.getElectricityArea(tooShortCode));
 	}
 }
