@@ -3,10 +3,7 @@ package io.github.mjsaa.energy_weather_api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import io.github.mjsaa.energy_weather_api.data.*;
-import io.github.mjsaa.energy_weather_api.service.ElectricityService;
-import io.github.mjsaa.energy_weather_api.service.GeoClosestFinder;
-import io.github.mjsaa.energy_weather_api.service.PostPositionService;
-import io.github.mjsaa.energy_weather_api.service.WeatherService;
+import io.github.mjsaa.energy_weather_api.service.*;
 import jakarta.validation.ConstraintViolationException;
 import org.json.JSONException;
 import org.junit.jupiter.api.Test;
@@ -16,6 +13,7 @@ import io.github.mjsaa.energy_weather_api.smhi.utils.SMHIService;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,6 +32,9 @@ class EnergyWeatherApiApplicationTests {
 	WeatherService weatherService;
 	@Autowired
     SMHIService SMHIService;
+
+	@Autowired
+	CombinationService combinationService;
 
 	@Test
 	void testStationListLength() throws JSONException, IOException {
@@ -153,6 +154,13 @@ class EnergyWeatherApiApplicationTests {
 	}
 
 	@Test
+	void testGetCombinedData() throws IOException {
+		Response response = combinationService.combineData("13443");
+		String area = response.electricityArea();
+		assertEquals(area, "3");
+	}
+
+	@Test
 	void testGetElectricityAreaCode() throws IOException {
 		String RegularPostCode = "13443";
 		String wrongPostCode = "wrong";
@@ -166,5 +174,29 @@ class EnergyWeatherApiApplicationTests {
 				() -> electricityService.getElectricityArea(tooLongCode));
 		assertThrows(ConstraintViolationException.class,
 				() -> electricityService.getElectricityArea(tooShortCode));
+	}
+
+	// this will start failing in November 2030
+	@Test
+	void testGetElectricityPrice() throws IOException {
+		// Given
+		String timestamp = "1764198000000";
+		String areaCode = "3";
+		String expected = "0.60104";
+		// When
+		String actual = electricityService.getElectricityPrice(timestamp, areaCode);
+		// Then
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	void testIsSunUp() {
+		Location location = new Location(59.314778, 18.406528); // Gustavsberg
+		String nightTimestamp = "1764198000000"; // 2025-11-25 00:00
+		String dayTimestamp = "1764241200000"; // 2025-11-25 12:00
+		Instant day = Instant.ofEpochMilli(Long.parseLong(dayTimestamp));
+		Instant night = Instant.ofEpochMilli(Long.parseLong(nightTimestamp));
+        assertTrue(weatherService.isSunUp(day, location));
+        assertFalse(weatherService.isSunUp(night, location));
 	}
 }
