@@ -136,13 +136,13 @@ public class SMHIService {
     }
 
 
-    private static JSONObject readJsonFromUrl(String url) throws IOException, JSONException {
+    private JSONObject readJsonFromUrl(String url) throws IOException, JSONException {
         String text = readStringFromUrl(url);
         return new JSONObject(text);
     }
 
 
-    public static String readStringFromUrl(String url) throws IOException {
+    public String readStringFromUrl(String url) throws IOException {
 
         InputStream inputStream = new URL(url).openStream();
         try {
