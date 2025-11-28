@@ -11,9 +11,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -22,7 +26,7 @@ import java.util.stream.IntStream;
 public class WeatherService {
     private static final String SMHI_TEMP_PARAMETER = "39";
     private static final String SMHI_WIND_PARAMETER = "4";
-    private static final String SMHI_CLOUDINESS_PARAMETER = "29";
+    private static final String SMHI_CLOUDINESS_PARAMETER = "16";
     @Autowired
     SMHIService smhiService;
     @Autowired
@@ -46,7 +50,7 @@ public class WeatherService {
         allTimestamps.addAll(cloudinessMap.keySet());
         JSONArray result = allTimestamps.stream()
                 .map(ts -> new JSONObject()
-                        .put("date", ts)
+                        .put("date", convertToIsoWithOffset(ts))
                         .put("temperature", tempMap.get(ts))
                         .put("windSpeed", windSpeedMap.get(ts))
                         .put("cloudiness", cloudinessMap.get(ts)))
@@ -55,7 +59,19 @@ public class WeatherService {
        List<WeatherObservation> weatherObservations = mapper.readValue(result.toString(), new TypeReference<>() {});
         return new WeatherSeries(weatherObservations);
     }
+    public static String convertToIsoWithOffset(String ts) {
+        long millis = Long.parseLong(ts);
 
+        Instant instant = Instant.ofEpochMilli(millis);
+
+        // Use Europe/Stockholm (or any TZ you want)
+        ZoneId zone = ZoneId.of("Europe/Stockholm");
+
+        ZonedDateTime zdt = instant.atZone(zone);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX");
+        return zdt.format(formatter);
+    }
     public List<CombinedWeatherElectricityData> getCombinedData(String postCode) throws IOException {
         Map<String, String> tempMap = indexByTimestamp(getDataJson(postCode, SMHI_TEMP_PARAMETER));
         Map<String, String> windSpeedMap = indexByTimestamp(getDataJson(postCode, SMHI_WIND_PARAMETER));
@@ -67,7 +83,7 @@ public class WeatherService {
         allTimestamps.addAll(cloudinessMap.keySet());
         JSONArray result = allTimestamps.stream()
                 .map(ts -> new JSONObject()
-                        .put("date", ts)
+                        .put("date", convertToIsoWithOffset(ts))
                         .put("temperature", tempMap.get(ts))
                         .put("windSpeed", windSpeedMap.get(ts))
                         .put("cloudiness", cloudinessMap.get(ts)))
@@ -82,7 +98,8 @@ public class WeatherService {
                         electricityService.getElectricityPrice(
                                 observation.date(),
                                 electricityService.getElectricityArea(postCode)),
-                        isSunUp(Instant.ofEpochMilli(Long.parseLong(observation.date())), postPositionService.getLocation(postCode))
+                        isSunUp(OffsetDateTime.parse(observation.date()).toInstant(),
+                                postPositionService.getLocation(postCode))
                         ));
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -102,21 +119,40 @@ public class WeatherService {
     }
     public JSONObject getDataJson(String postCode, String SMHIParameter) throws IOException {
         List<Station> stations = smhiService.getStations(SMHIParameter);
-        List<Location> stationLocations = stations
-                .stream()
-                .map(station -> new Location(station.latitude(), station.longitude())).toList();
         Location point = postPositionService.getLocation(postCode); // a coordination within the post code
         Station closestStation = geoClosestFinder.getClosest(point, stations); // closest station location to the point
-        String temperatureDataURL = metObsAPI
+        String url = metObsAPI
                 + "/version/latest/parameter/"
                 + SMHIParameter
                 + "/station/"
                 + closestStation.key() +
                 "/period/latest-day/data.json";
-        String temperatureJson = smhiService.readStringFromUrl(temperatureDataURL);
-        return new JSONObject(temperatureJson);
+        try {
+            String temperatureJson = smhiService.readStringFromUrl(url);
+            return new JSONObject(temperatureJson);
+        } catch (FileNotFoundException exception) {
+            stations.remove(closestStation);
+            return getDataJson(stations, postCode, SMHIParameter);
+        }
     }
+    public JSONObject getDataJson(List<Station> stations, String postCode, String SMHIParameter) throws IOException {
 
+        Location point = postPositionService.getLocation(postCode); // a coordination within the post code
+        Station closestStation = geoClosestFinder.getClosest(point, stations); // closest station location to the point
+        String url = metObsAPI
+                + "/version/latest/parameter/"
+                + SMHIParameter
+                + "/station/"
+                + closestStation.key() +
+                "/period/latest-day/data.json";
+        try {
+            String temperatureJson = smhiService.readStringFromUrl(url);
+            return new JSONObject(temperatureJson);
+        } catch (FileNotFoundException exception) {
+            stations.remove(closestStation);
+            return getDataJson(stations, postCode, SMHIParameter);
+        }
+    }
 
     public boolean isSunUp(Instant instant, Location location) {
         SunTimes times = SunTimes.compute()

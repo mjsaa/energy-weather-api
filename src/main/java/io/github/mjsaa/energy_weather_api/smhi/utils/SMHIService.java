@@ -1,9 +1,6 @@
 package io.github.mjsaa.energy_weather_api.smhi.utils;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -153,7 +150,8 @@ public class SMHIService {
                 stringBuilder.append((char) cp);
             }
             return stringBuilder.toString();
-        } finally {
+        }
+        finally {
             inputStream.close();
         }
     }

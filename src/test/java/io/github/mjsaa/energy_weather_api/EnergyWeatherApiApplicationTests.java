@@ -180,7 +180,7 @@ class EnergyWeatherApiApplicationTests {
 	@Test
 	void testGetElectricityPrice() throws IOException {
 		// Given
-		String timestamp = "1764198000000";
+		String timestamp = "2025-11-27T00:00:00+01:00";
 		String areaCode = "3";
 		String expected = "0.60104";
 		// When

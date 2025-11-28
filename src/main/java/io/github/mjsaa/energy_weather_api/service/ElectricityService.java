@@ -15,6 +15,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -50,8 +51,9 @@ public class ElectricityService {
         });
         Map<String, String> timePriceMap = new HashMap<>();
         prices.forEach(p -> timePriceMap.put(p.time(), p.priceInSEK()));
-        String isoTime = unixToISOTime(Long.parseLong(timestamp));
-        return timePriceMap.get(isoTime);
+//        String isoTime = unixToISOTime(Long.parseLong(timestamp));
+//        return timePriceMap.get(isoTime);
+        return timePriceMap.get(timestamp);
     }
     public String unixToISOTime(long unixMillis) {
         return Instant.ofEpochMilli(unixMillis)
@@ -60,9 +62,9 @@ public class ElectricityService {
     }
     private String buildUrl(String timestamp, String areaCode) {
         return elPrice +
-                getYearFromUnix(Long.parseLong(timestamp)) +
+                OffsetDateTime.parse(timestamp).getYear() +
                 "/" +
-                getMonthDayFromUnix(Long.parseLong(timestamp)) +
+                OffsetDateTime.parse(timestamp).format(DateTimeFormatter.ofPattern("MM-dd")) +
                 "_SE" +
                 areaCode +
                 ".json";
